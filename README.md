@@ -153,7 +153,7 @@ TerraMind 1.0 base (IBM, ESA, Forschungszentrum Jülich) runs locally on 12-band
 │   └── demo_questions.py     # the three demonstration questions
 ├── tests/                    # pytest: real MCP server, agent wiring with a scripted fake LLM
 ├── outputs/                  # generated rasters, vectors, figures, MCP transcripts
-├── figures/                  # method diagrams, illustrations, terminal recording
+├── figures/                  # method diagrams and flow figure, terminal recording
 ├── requirements.txt          # pinned versions used to execute the notebook
 └── requirements-ci.txt       # lighter set for CI (no foundation models)
 ```
