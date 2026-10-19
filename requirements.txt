@@ -16,3 +16,10 @@ scikit-learn
 torch
 terratorch
 geotessera
+mcp
+langgraph
+langchain-mcp-adapters
+langchain-ollama
+httpx
+pytest
+pytest-asyncio

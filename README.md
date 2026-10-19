@@ -30,10 +30,29 @@ Earth Observation AI Engineer: home assignment. Everything is in [`notebook.ipyn
 | `terramind_lulc_2023_2025.png`, `terramind_embedding_change.png` | Bonus B: TerraMind generated land cover and embedding change |
 | `tessera_clusters_alert_rate.png` | Bonus B: TESSERA forest types and alert rate |
 
+## Bonus A: the pipeline as MCP tools, called by EVE
+
+![EVE calling the MCP tool, live](figures/mcp_eve_demo.gif)
+
+*Real terminal recording (`figures/mcp_eve_demo.cast`): EVE-Instruct, running locally, answers the example question of the assignment by calling `compare_vegetation`; the pipeline runs on fresh Sentinel-2 data and the answer passes the grounding check.*
+
+- `mcp_server/server.py`: MCP server (FastMCP, stdio) with three tools: `list_scenes`, `compare_vegetation`, `dieback_alerts`.
+- `mcp_server/agent.py`: LangGraph agent; EVE-Instruct (`eve-esa/EVE-Instruct-GGUF-Q4_K_M`) runs locally via Ollama and calls the tools; each run writes a transcript with an automatic grounding check.
+- `outputs/mcp/transcript_q*.md`: the three demonstration questions (example question of the assignment, our use case, an out-of-scope question). Earlier runs, with the errors they revealed, are in `outputs/mcp/run1/` and `run2/`.
+
+```bash
+pytest -q                                # works without any LLM: real MCP server + agent wiring with a scripted fake model
+ollama pull hf.co/eve-esa/EVE-Instruct-GGUF-Q4_K_M
+python -m mcp_server.demo_questions      # the three questions with EVE
+python -m mcp_server.agent --model qwen2.5:7b-instruct "..."   # any Ollama model with tool calling
+```
+
 ## Repository layout
 
 - `notebook.ipynb`: narrated analysis, all cells executed.
-- `src/pipeline.py`: all processing functions (search, masking, indices, composites, anomaly / recovery, aggregation, export). The notebook calls them, and the same functions are meant to be exposed as MCP tools.
+- `src/pipeline.py`: all processing functions (search, masking, indices, composites, anomaly / recovery, aggregation, export). The notebook and the MCP server call them.
+- `src/gfm.py`: TerraMind and TESSERA (bonus B).
+- `mcp_server/`, `tests/`: bonus A.
 - `figures/`: method diagrams and illustrations used in the notebook.
 - `outputs/`: generated files.
 

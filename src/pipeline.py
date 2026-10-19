@@ -207,7 +207,10 @@ def cell_stats(flag: xr.DataArray, valid: xr.DataArray, z: xr.DataArray, rec: xr
 
 
 def flag_polygons(flag: xr.DataArray, min_area_ha: float = 1.0, resolution: int = 20):
-    """Vectorise flagged pixels into patches; patches smaller than `min_area_ha` are sieved out."""
+    """Vectorise flagged pixels into patches; patches smaller than `min_area_ha` are sieved out.
+
+    Patch areas count flagged pixels only (holes inside a patch stay holes).
+    """
     import geopandas as gpd
     import rioxarray  # noqa: F401  (registers .rio)
     from rasterio import features
@@ -215,6 +218,8 @@ def flag_polygons(flag: xr.DataArray, min_area_ha: float = 1.0, resolution: int 
 
     arr = flag.fillna(0).astype("uint8").values
     sieved = features.sieve(arr, size=int(min_area_ha * 1e4 / resolution ** 2), connectivity=8)
+    # sieve also fills unflagged holes < min_area inside patches; keep only truly flagged pixels
+    sieved = (sieved & arr).astype("uint8")
     transform = flag.rio.write_crs(CRS).rio.transform()
     geoms = [shape(g) for g, v in features.shapes(sieved, mask=sieved == 1, transform=transform) if v == 1]
     gdf = gpd.GeoDataFrame({"area_ha": [round(g.area / 1e4, 2) for g in geoms]}, geometry=geoms, crs=CRS)
@@ -230,3 +235,12 @@ def export_cog(da: xr.DataArray, path: str, nodata=np.nan, dtype="float32") -> s
     out.rio.write_crs(CRS, inplace=True).rio.write_nodata(nodata, inplace=True)
     out.rio.to_raster(path, driver="COG")
     return path
+
+
+def period_composite(bbox, start: str, end: str, resolution: int = 20, max_cloud: float = 20):
+    """Per-pixel median of the indices over any date window, plus the number of acquisitions used."""
+    items = search_scenes(bbox, start, end, max_cloud)
+    if not items:
+        return None, 0
+    idx = compute_indices(load_reflectance(items, bbox, resolution)).median("time").compute()
+    return idx, len(items)

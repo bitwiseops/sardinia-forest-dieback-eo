@@ -1,0 +1,19 @@
+{
+ "question": "Who painted the ceiling of the Sistine Chapel?",
+ "model": {
+  "name": "hf.co/eve-esa/EVE-Instruct-GGUF-Q4_K_M",
+  "digest": "3502db63acb0af1fd6581ce44cf24e3463c6df4b8c492809a28a88652aad5dba",
+  "size_gb": 14.33,
+  "quantization": "unknown"
+ },
+ "utc": "2026-10-19T20:57:48+00:00",
+ "seconds": 1.3,
+ "steps": [],
+ "answer": "The ceiling of the Sistine Chapel was painted by Michelangelo.",
+ "tools_called": [],
+ "grounding": {
+  "numbers_in_answer": 0,
+  "unsupported": [],
+  "grounded": true
+ }
+}
