@@ -1,0 +1,20 @@
+# lighter set for CI: the tests exercise the pipeline, the MCP server and the agent wiring,
+# not the foundation models (torch / terratorch / geotessera are not needed)
+pystac-client==0.9.0
+planetary-computer==1.0.0
+odc-stac==0.5.3
+rioxarray==0.23.0
+rasterio==1.5.2
+geopandas==1.2.0
+shapely==2.2.0
+matplotlib==3.11.2
+bottleneck==1.6.0
+pandas==3.0.6
+scipy==1.18.1
+mcp==1.30.0
+langgraph==1.2.16
+langchain-mcp-adapters==0.3.2
+langchain-ollama==1.1.0
+httpx==0.28.1
+pytest==9.1.1
+pytest-asyncio==1.4.0
