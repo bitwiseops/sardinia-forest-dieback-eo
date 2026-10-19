@@ -9,3 +9,5 @@ matplotlib
 folium
 jupyterlab
 ipykernel
+bottleneck
+pandas
