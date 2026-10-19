@@ -2,7 +2,13 @@
 
 Earth Observation AI Engineer: home assignment. Everything is in [`notebook.ipynb`](notebook.ipynb), executed top to bottom.
 
+In August 2024 the Sardinian Regional Government declared urgent measures against a dieback of cork-oak and holm-oak woods spreading over thousands of hectares ([Delibera RAS n. 31/7, 28.08.2024](https://delibere.regione.sardegna.it/protected/71682/0/def/ref/DBR71680/)). This project tells the regional forest agency where to send field teams first in the Sette Fratelli massif.
+
+> **Answer in brief.** Summer 2024 was by far the driest canopy state of 2019–2025. **2,211 ha (13 % of the analysed forest) dried out much more than the surrounding woods and had not recovered by summer 2025**, after excluding fires and clear-cuts. They concentrate in **40 blocks of 25 ha**, ranked in [`outputs/alert_cells.csv`](outputs/alert_cells.csv) / [`.geojson`](outputs/alert_cells.geojson).
+
 ![Method](figures/method_flow.jpg)
+
+*Illustrative render with labels, not to scale; each step is a function in `src/pipeline.py` and a section of the notebook.*
 
 ## Choices
 
@@ -30,6 +36,16 @@ Earth Observation AI Engineer: home assignment. Everything is in [`notebook.ipyn
 | `terramind_lulc_2023_2025.png`, `terramind_embedding_change.png` | Bonus B: TerraMind generated land cover and embedding change |
 | `tessera_clusters_alert_rate.png` | Bonus B: TESSERA forest types and alert rate |
 
+## Bonus B: what geospatial foundation models add (notebook section 9)
+
+- **TerraMind 1.0 base** (IBM, ESA, Jülich), **run locally** on 12-band 10 m composites:
+  - its generated land cover agrees with the real ESRI / IO 2023 map on 88.6 % of pixels;
+  - a new column of the inspection list, `canopy_no_longer_trees`, gives the share of flagged tree canopy that no longer looks like trees in 2025, to separate "monitor" from "plan restoration";
+  - its embeddings change most where NDMI flags.
+- **TESSERA** pre-computed embeddings:
+  - whole-year change confirms the alerts (Spearman 0.68 at cell level);
+  - unsupervised forest types show that alerts concentrate in some types and almost spare others.
+
 ## Bonus A: the pipeline as MCP tools, called by EVE
 
 ![EVE calling the MCP tool, live](figures/mcp_eve_demo.gif)
@@ -55,8 +71,11 @@ python -m mcp_server.agent --model qwen2.5:7b-instruct "..."   # any Ollama mode
 - `mcp_server/`, `tests/`: bonus A.
 - `figures/`: method diagrams and illustrations used in the notebook.
 - `outputs/`: generated files.
+- `data/` (not versioned): cache of TESSERA embeddings.
 
 ## Run it
+
+Python 3.12. EVE / Ollama are optional: without them, section 10 shows the transcripts of the last live run and says so.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -65,3 +84,7 @@ jupyter lab notebook.ipynb   # or: jupyter nbconvert --to notebook --execute not
 ```
 
 A full run takes about 20 minutes on a laptop CPU: Sentinel-2 windows for seven summers, 12-band 10 m composites for TerraMind, and about 1.7 GB of TESSERA embeddings on first run (cached in `data/`).
+
+## Notes
+
+Developed with AI coding assistance, as the assignment allows. The use case, the methodological choices and the results were reviewed by me, and I will explain them in the interview.
