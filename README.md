@@ -14,6 +14,7 @@ Earth Observation AI Engineer: home assignment. Everything is in [`notebook.ipyn
 | Data | Sentinel-2 L2A (98 acquisitions), ESA WorldCover 2021 |
 | Backend | Microsoft Planetary Computer, STAC API (no account needed) |
 | Indices | NDMI (main), NDVI, CRswir, NBR (fire / logging screen) |
+| Foundation models (bonus B) | TerraMind 1.0 base, run locally (generated land cover, embeddings); TESSERA v1 pre-computed embeddings |
 
 ## Outputs (`outputs/`)
 
@@ -25,6 +26,9 @@ Earth Observation AI Engineer: home assignment. Everything is in [`notebook.ipyn
 | `alert_cells.geojson`, `alert_patches.geojson` | Priority 25 ha cells and flagged patches (EPSG:4326) |
 | `alert_cells.csv` | Ranked inspection list |
 | `anomaly_recovery_flag.png` | Anomaly, recovery and alert maps |
+| `priority_cells_true_colour.png` | Top-3 priority cells in true colour, 2023–2025 |
+| `terramind_lulc_2023_2025.png`, `terramind_embedding_change.png` | Bonus B: TerraMind generated land cover and embedding change |
+| `tessera_clusters_alert_rate.png` | Bonus B: TESSERA forest types and alert rate |
 
 ## Repository layout
 
@@ -41,4 +45,4 @@ pip install -r requirements.txt
 jupyter lab notebook.ipynb   # or: jupyter nbconvert --to notebook --execute notebook.ipynb
 ```
 
-A full run downloads about 100 Sentinel-2 scene windows over the AOI and takes about 5 minutes on a laptop.
+A full run takes about 20 minutes on a laptop CPU: Sentinel-2 windows for seven summers, 12-band 10 m composites for TerraMind, and about 1.7 GB of TESSERA embeddings on first run (cached in `data/`).

@@ -11,3 +11,8 @@ jupyterlab
 ipykernel
 bottleneck
 pandas
+scipy
+scikit-learn
+torch
+terratorch
+geotessera
