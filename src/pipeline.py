@@ -99,3 +99,134 @@ def forest_mask(bbox, like: xr.Dataset, resolution: int = 20) -> xr.DataArray:
 def to_rgb(r: xr.Dataset, gain: float = 1 / 0.15) -> np.ndarray:
     """True-colour array (y, x, 3) clipped to 0-1 for plotting."""
     return np.clip(r[["B04", "B03", "B02"]].to_array().transpose("y", "x", "variable").values * gain, 0, 1)
+
+
+# ---------------------------------------------------------------------------
+# Seasonal composites, disturbance screening, anomaly / recovery, outputs
+# ---------------------------------------------------------------------------
+
+def summer_composites(bbox, years, season=("07-01", "09-30"), resolution: int = 20,
+                      max_cloud: float = 20, min_valid: float = 0.5):
+    """Per-year median composites of the indices, the forest mask, and a per-acquisition table.
+
+    The table holds, for every acquisition, the median of each index over forest pixels; dates
+    where less than `min_valid` of the forest is cloud-free are kept but marked unreliable.
+    """
+    comps, rows, forest = [], [], None
+    for y in years:
+        items = search_scenes(bbox, f"{y}-{season[0]}", f"{y}-{season[1]}", max_cloud)
+        r = load_reflectance(items, bbox, resolution)
+        idx = compute_indices(r).compute()
+        if forest is None:
+            forest = forest_mask(bbox, idx, resolution)
+        valid_frac = r.valid.where(forest).mean(["x", "y"]).compute()
+        per_date = idx.where(forest).median(["x", "y"])
+        for t in idx.time.values:
+            row = {"date": pd.Timestamp(t), "year": y,
+                   "forest_valid_frac": round(float(valid_frac.sel(time=t)), 3)}
+            row.update({v: float(per_date[v].sel(time=t)) for v in idx.data_vars})
+            rows.append(row)
+        comps.append(idx.median("time").expand_dims(year=[y]))
+    table = pd.DataFrame(rows)
+    table["reliable"] = table.forest_valid_frac >= min_valid
+    return xr.concat(comps, "year"), forest, table
+
+
+def abrupt_disturbance(bbox, years, like: xr.Dataset, drop: float = 0.25, persist: float = 0.15,
+                       season=("06-01", "10-31"), resolution: int = 20, max_cloud: float = 20) -> xr.DataArray:
+    """Pixels with a sudden NBR drop that does not rebound within the season (fire, clear-cut).
+
+    Drought lowers NBR gradually; fire and logging cause a step. A pixel is flagged when NBR falls
+    by more than `drop` between two consecutive valid observations and the maximum of all later
+    observations in the season is still more than `persist` below the pre-drop value.
+    """
+    out = xr.zeros_like(like[list(like.data_vars)[0]], dtype=bool)
+    for y in years:
+        items = search_scenes(bbox, f"{y}-{season[0]}", f"{y}-{season[1]}", max_cloud)
+        nbr = compute_indices(load_reflectance(items, bbox, resolution)).nbr.compute()
+        prev = nbr.ffill("time").shift(time=1)
+        later_max = nbr.copy(data=np.fmax.accumulate(nbr.values[::-1], axis=0)[::-1])
+        hit = (((prev - nbr) > drop) & ((prev - later_max) > persist)).any("time")
+        out = out | hit.assign_coords(x=out.x, y=out.y)
+    return out.rename("disturbed")
+
+
+def anomaly_recovery(comp: xr.Dataset, var: str, valid: xr.DataArray, base_years, event_year: int,
+                     recovery_year: int, sign: int = 1, landscape: bool = True):
+    """Standardised anomaly in the event year and fraction of the drop recovered the year after.
+
+    sign=-1 for indices where higher means drier (CRswir). With landscape=True the forest-wide
+    median of each year is subtracted first, removing the climate signal shared by the whole AOI.
+    z = (x_event - mu) / sigma over the baseline years;
+    R = (x_recovery - x_event) / (mu - x_event): 1 = back to baseline, 0 = no recovery, <0 = worse.
+    """
+    x = comp[var].where(valid) * sign
+    if landscape:
+        x = x - x.median(["x", "y"])
+    base = x.sel(year=list(base_years))
+    mu, sd = base.median("year"), base.std("year")
+    xe, xr_ = x.sel(year=event_year, drop=True), x.sel(year=recovery_year, drop=True)
+    z = ((xe - mu) / sd).rename("z")
+    rec = ((xr_ - xe) / (mu - xe)).rename("recovery")
+    return z, rec
+
+
+def cell_stats(flag: xr.DataArray, valid: xr.DataArray, z: xr.DataArray, rec: xr.DataArray,
+               cell: int = 500, resolution: int = 20, min_valid: float = 0.5):
+    """Aggregate pixel flags on a square grid; returns a GeoDataFrame ranked by flagged hectares."""
+    import geopandas as gpd
+    from shapely.geometry import box
+
+    k = cell // resolution
+    px_ha = resolution * resolution / 1e4
+    F, V, Z, R = flag.values, valid.values, z.values, rec.values
+    xs, ys = flag.x.values, flag.y.values
+    rows = []
+    for i in range(0, F.shape[0] - k + 1, k):
+        for j in range(0, F.shape[1] - k + 1, k):
+            v = V[i:i + k, j:j + k]
+            if v.sum() < min_valid * k * k:
+                continue
+            f = F[i:i + k, j:j + k] & v
+            xx, yy = xs[j:j + k], ys[i:i + k]
+            rows.append({
+                "geometry": box(xx.min() - resolution / 2, yy.min() - resolution / 2,
+                                xx.max() + resolution / 2, yy.max() + resolution / 2),
+                "forest_ha": round(float(v.sum()) * px_ha, 1),
+                "flagged_ha": round(float(f.sum()) * px_ha, 1),
+                "flagged_frac": round(float(f.sum() / v.sum()), 3),
+                "z2024_median": round(float(np.nanmedian(np.where(v, Z[i:i + k, j:j + k], np.nan))), 2),
+                "recovery_median_flagged": (round(float(np.nanmedian(R[i:i + k, j:j + k][f])), 2)
+                                            if f.any() else None),
+            })
+    gdf = gpd.GeoDataFrame(rows, crs=CRS).sort_values("flagged_ha", ascending=False).reset_index(drop=True)
+    gdf.insert(0, "rank", np.arange(1, len(gdf) + 1))
+    c = gdf.to_crs(4326).geometry.centroid
+    gdf["lat"], gdf["lon"] = c.y.round(5), c.x.round(5)
+    return gdf
+
+
+def flag_polygons(flag: xr.DataArray, min_area_ha: float = 1.0, resolution: int = 20):
+    """Vectorise flagged pixels into patches; patches smaller than `min_area_ha` are sieved out."""
+    import geopandas as gpd
+    import rioxarray  # noqa: F401  (registers .rio)
+    from rasterio import features
+    from shapely.geometry import shape
+
+    arr = flag.fillna(0).astype("uint8").values
+    sieved = features.sieve(arr, size=int(min_area_ha * 1e4 / resolution ** 2), connectivity=8)
+    transform = flag.rio.write_crs(CRS).rio.transform()
+    geoms = [shape(g) for g, v in features.shapes(sieved, mask=sieved == 1, transform=transform) if v == 1]
+    gdf = gpd.GeoDataFrame({"area_ha": [round(g.area / 1e4, 2) for g in geoms]}, geometry=geoms, crs=CRS)
+    return gdf.sort_values("area_ha", ascending=False).reset_index(drop=True)
+
+
+def export_cog(da: xr.DataArray, path: str, nodata=np.nan, dtype="float32") -> str:
+    """Write a 2-D DataArray as a Cloud-Optimised GeoTIFF in the pipeline CRS."""
+    import rioxarray  # noqa: F401
+
+    out = da.astype(dtype)
+    out = out.drop_vars([c for c in out.coords if c not in ("x", "y")])
+    out.rio.write_crs(CRS, inplace=True).rio.write_nodata(nodata, inplace=True)
+    out.rio.to_raster(path, driver="COG")
+    return path
