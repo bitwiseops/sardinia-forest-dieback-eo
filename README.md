@@ -1,23 +1,44 @@
-# Earth Observation AI Engineer: home assignment
+# Post-drought forest dieback in Sardinia: where should foresters inspect first?
 
-Notebook: [`notebook.ipynb`](notebook.ipynb)
+Earth Observation AI Engineer: home assignment. Everything is in [`notebook.ipynb`](notebook.ipynb), executed top to bottom.
+
+![Method](figures/method_flow.jpg)
 
 ## Choices
 
-- Use case: TODO
-- AOI and time range: TODO
-- Decision question and user: TODO
-- Data backend: TODO
-- Bonus goals: TODO
+| | |
+|---|---|
+| Use case | Forest dieback after the 2024 drought in Sardinia (Sette Fratelli massif, Sarrabus) |
+| Decision question | Which forest areas should the regional forest service inspect first: canopy that dried out in summer 2024 **and did not recover** in 2025? |
+| AOI and time range | `(9.33, 39.19, 9.52, 39.33)`, July–September 2019–2025 |
+| Data | Sentinel-2 L2A (98 acquisitions), ESA WorldCover 2021 |
+| Backend | Microsoft Planetary Computer, STAC API (no account needed) |
+| Indices | NDMI (main), NDVI, CRswir, NBR (fire / logging screen) |
 
-## Setup
+## Outputs (`outputs/`)
+
+| File | What |
+|---|---|
+| `composites_true_false_colour_2023_2025.png` | True- and false-colour summer composites |
+| `timeseries_ndmi_ndvi.png` | NDMI and NDVI per acquisition, 2019–2025 |
+| `ndmi_z2024.tif`, `ndmi_recovery2025.tif`, `dieback_alert.tif` | Cloud-Optimised GeoTIFFs, EPSG:32632, 20 m |
+| `alert_cells.geojson`, `alert_patches.geojson` | Priority 25 ha cells and flagged patches (EPSG:4326) |
+| `alert_cells.csv` | Ranked inspection list |
+| `anomaly_recovery_flag.png` | Anomaly, recovery and alert maps |
+
+## Repository layout
+
+- `notebook.ipynb`: narrated analysis, all cells executed.
+- `src/pipeline.py`: all processing functions (search, masking, indices, composites, anomaly / recovery, aggregation, export). The notebook calls them, and the same functions are meant to be exposed as MCP tools.
+- `figures/`: method diagrams and illustrations used in the notebook.
+- `outputs/`: generated files.
+
+## Run it
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-jupyter lab notebook.ipynb
+jupyter lab notebook.ipynb   # or: jupyter nbconvert --to notebook --execute notebook.ipynb
 ```
 
-## Outputs
-
-Written to `outputs/` by the notebook.
+A full run downloads about 100 Sentinel-2 scene windows over the AOI and takes about 5 minutes on a laptop.
