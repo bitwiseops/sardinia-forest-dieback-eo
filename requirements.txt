@@ -1,0 +1,11 @@
+pystac-client
+planetary-computer
+odc-stac
+rioxarray
+rasterio
+geopandas
+shapely
+matplotlib
+folium
+jupyterlab
+ipykernel
