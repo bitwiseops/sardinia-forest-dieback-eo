@@ -195,6 +195,7 @@ def dieback_alerts(bbox: list[float], event_year: int = 2024, recovery_year: int
     Fires and clear-cuts (abrupt NBR drops) are excluded. Flags are aggregated on 500 m cells (25 ha).
     Returns forest and flagged hectares, the top_n priority cells (lat, lon, flagged ha), and file paths.
     """
+    z_threshold = -abs(z_threshold)   # documented as |z_threshold|: a positive value would flag almost every pixel
     base = baseline_years or list(range(event_year - 5, event_year))
     try:
         bb, _, area = _aoi(bbox=bbox)

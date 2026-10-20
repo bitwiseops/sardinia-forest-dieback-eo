@@ -54,3 +54,13 @@ async def test_invalid_input_returns_readable_error():
     res = await _call("compare_vegetation", {"bbox": [0, 0, 10, 10], "period_a": "2022-07-01/2022-09-30",
                                              "period_b": "2024-07-01/2024-09-30"})
     assert "limit" in res["error"]
+
+
+@pytest.mark.asyncio
+async def test_z_threshold_sign_does_not_matter():
+    """The docstring says |z_threshold|: a positive value (which some LLMs pass) must not flag the whole forest."""
+    neg = await _call("dieback_alerts", {"bbox": TINY, "z_threshold": -2.0})
+    pos = await _call("dieback_alerts", {"bbox": TINY, "z_threshold": 2.0})
+    assert "error" not in neg and "error" not in pos, (neg, pos)
+    assert pos["flagged_ha"] == neg["flagged_ha"]
+    assert pos["priority_cells_25ha"] == neg["priority_cells_25ha"]
