@@ -41,7 +41,7 @@ In August 2024 the Sardinian Regional Government declared urgent measures agains
 
 This project answers the question a forest manager has to settle before sending teams out: **which forest areas in the Sette Fratelli massif (Sarrabus, SE Sardinia) dried out in summer 2024 *and did not recover* in 2025?** In a drought year almost every crown loses water. The stands that fail to recover the following year are the ones at risk of dieback and mortality.
 
-> **Answer in brief.** Summer 2024 was by far the driest canopy state of 2019–2025. **2,211 ha (13 % of the analysed forest) dried out much more than the surrounding woods and had not recovered by summer 2025**, after excluding fires and clear-cuts. They concentrate in **40 blocks of 25 ha**, ranked in [`outputs/alert_cells.csv`](outputs/alert_cells.csv) / [`.geojson`](outputs/alert_cells.geojson).
+> **Answer in brief.** Summer 2024 was by far the driest canopy state of 2019–2025. **2,211 ha (13 % of the analysed forest) dried out much more than the surrounding woods and had not recovered by summer 2025**, after excluding fires and clear-cuts. The alert is densest in **40 blocks of 25 ha** where at least half of the forest is flagged (528.6 ha, about a quarter of the total), ranked in [`outputs/alert_cells.csv`](outputs/alert_cells.csv) / [`.geojson`](outputs/alert_cells.geojson).
 
 Everything is in [`notebook.ipynb`](notebook.ipynb), narrated and executed top to bottom.
 
